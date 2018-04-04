@@ -1,5 +1,8 @@
 #!/bin/sh
+#Author: DayouDu (2018)
+#Email : dayoudu@nyu.edu
 
+#Fetch Data From GitHub Archive
 mkdir /scratch/dd2645/github_raw/
 
 cd /scratch/dd2645/github_raw/
