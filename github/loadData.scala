@@ -35,7 +35,8 @@ def loadRepoLang(path: String):DataFrame = {
 
 def runGitHub():Unit = {
     //load github events
-    val EventPath = "hdfs:///user/dd2645/github_raw/after2015/2017*";
+    //for now just test on monthly data - much faster :P
+    val EventPath = "hdfs:///user/dd2645/github_raw/after2015/2017-01-*";
     val allEvents = loadGitHubEvents(EventPath);
 
     //load github repo language
