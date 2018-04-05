@@ -1,3 +1,9 @@
+//Ignore chatty messages :P
+import org.apache.log4j.Logger
+import org.apache.log4j.Level
+Logger.getLogger("org").setLevel(Level.OFF)
+Logger.getLogger("akka").setLevel(Level.OFF)
+
 //create SQLContext
 import org.apache.spark.sql._
 val sqlCtx = new SQLContext(sc)
@@ -5,17 +11,22 @@ import sqlCtx._
 
 def loadGitHubEvents(path: String):DataFrame = {
     //load raw github events api json files
-    val allEvents = sqlCtx.jsonFile(path);
+    val allEvents = sqlCtx.jsonFile(path).cache()
 
     //print schema
     allEvents.printSchema;
 
-    //get all event types
-    val allEventTypes = allEvents.select("type").distinct;
-    allEventTypes.show;
-
     //briefly counting different events
     allEvents.groupBy("type").count().show;
+
+    //Check Range Of EventIds
+    val ids = allEvents.select("id").map(row => row(0).toString.toLong).toDF("eventId");
+    val idRange = ids.agg(min("eventId"),max("eventId")).head;
+    print("Event Id Range: " + idRange.toString + "\n");
+
+    //counting the active repos for current time period
+    val activeRepos = allEvents.select("repo.*").distinct;
+    print("Num of Active Repos = " + activeRepos.count + "\n");
 
     return allEvents;
 }
@@ -28,7 +39,7 @@ def loadRepoLang(path: String):DataFrame = {
     allRepos.printSchema;
 
     //get number of repos we have
-    allRepos.count;
+    print("Num of Total Recorded Repo = " + allRepos.count + "\n");
     
     return allRepos;
 }
