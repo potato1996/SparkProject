@@ -1,23 +1,36 @@
 //Ignore chatty messages :P
 import org.apache.log4j.Logger
 import org.apache.log4j.Level
-import scala.util.parsing.json.JSON
 Logger.getLogger("org").setLevel(Level.OFF)
 Logger.getLogger("akka").setLevel(Level.OFF)
 
 //create SQLContext
-import org.apache.spark.sql._
-val sqlCtx = new SQLContext(sc)
-import sqlCtx._
+//import org.apache.spark.sql._
+//val sqlCtx = new SQLContext(sc)
+//import sqlCtx._
 
-def loadGitHubEvents(path: String):DataFrame = {
+import scala.util.parsing.json.JSON
+import org.apache.spark.rdd._
+
+def loadGitHubEvents(path: String):RDD[((Int,Int,Int,Int),String)] = {
     //load raw github events api json files
-    val allEvents = sqlCtx.jsonFile(path);
+    //val allEvents = sqlCtx.jsonFile(path);
+    val allEvents = sc.wholeTextFiles(path);
+
+    def parseTime(fileName: String): (Int,Int,Int,Int) = {
+        val fields = fileName.split(Array('-','.'));
+        val year = fields(0).toInt;
+        val month = fields(1).toInt;
+        val day = fields(2).toInt;
+        val hours = fields(3).toInt;
+        return (year, month, day, hours)
+    }
+    val flattened = allEvents.flatMap(t2 => t2._2.split('\n').map(v => parseTime(t2._1) -> v));
     
-    return allEvents;
+    return flattened;
 }
 
-def loadRepoLang(path: String):Rdd = {
+def loadRepoLang(path: String):RDD[(String, List[(String, Long)])] = {
     //load repo lang json files
     val allRepos = sc.textFile(path);
 
@@ -30,8 +43,8 @@ def loadRepoLang(path: String):Rdd = {
     val formatted1 = extracted.map(x => x("repo_name").toString -> x("language"));
     
     val formatted2 = formatted1.mapValues( v => v match {
-        case l:List[Map[String,String]] => l
-        case m:Map[String,String] => List(m)
+        case l:List[_] => l
+        case m:Map[_,_] => List(m)
     });
     
     val formatted3 = formatted2.mapValues(v => v.asInstanceOf[List[Map[String,String]]].map(m => (m("name"), m("bytes").toLong)));
@@ -39,7 +52,7 @@ def loadRepoLang(path: String):Rdd = {
     return formatted3;
 }
 
-def selMainLang(repoLang: Rdd): Rdd = {
+def selMainLang(repoLang: RDD[(String,List[(String, Long)])]):RDD[(String,(String,Long))] = {
     //From (repo_name:String -> List(language_name:String, count:Long))
     //To   (repo_name:String -> (major_language_name:String, count:Long))
     //Here is a trick, sort by decending order using "-"
@@ -48,7 +61,8 @@ def selMainLang(repoLang: Rdd): Rdd = {
     return repoMainLang;
 }
 
-def numPush(allEvents: DataFrame, repoMainLang: Rdd):Unit = {
+def numPush(allEvents: RDD[((Int,Int,Int,Int),String)],
+            repoMainLang: RDD[(String, (String, Long))]):Unit = {
     
 }
 
