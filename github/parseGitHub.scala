@@ -38,7 +38,6 @@ class myDateTime(_year:Int = 1970, _month:Int = 1, _day:Int = 1, _hours:Int = 0)
 def loadGitHubEvents(path: String):RDD[(myDateTime,String)] = {
     //load raw github events api json files
     //val allEvents = sqlCtx.jsonFile(path);
-    print(path);
 
     val allEvents = sc.wholeTextFiles(path);
 
@@ -93,7 +92,10 @@ def selMainLang(repoLang: RDD[(String,List[(String, Long)])]):RDD[(String,(Strin
     //From (repo_name:String -> List(language_name:String, count:Long))
     //To   (repo_name:String -> (major_language_name:String, count:Long))
     //Here is a trick, sort by decending order using "-"
-    val repoMainLang = repoLang.mapValues(v => v.sortBy( - _._2).head);
+    val repoMainLang = repoLang.mapValues(v => v.sortBy( - _._2) match {
+        case x :: _ => x;
+        case _      => ("None",0L);
+    });
 
     return repoMainLang;
 }
@@ -138,12 +140,15 @@ def runGitHub():Unit = {
     //original json data from google big query open data set
     val repoLangPath = "hdfs:///user/dd2645/github_repo_language/github.json";
     val repoLang = loadRepoLang(repoLangPath);
-    repoLang.persist()
     
     //Get the top first language from each repo
     val repoMainLang = selMainLang(repoLang);
-    repoMainLang.persist()
+    repoMainLang.persist();
 
+    val pushReduced = numPush(allEvents, repoMainLang);
+
+    val outputDir = "hdfs:///user/dd2645/SparkProject/testOut";
+    pushReduced.map(p => "(" + p._1.toString + "," + p._2.toString + ")").saveAsTextFile(outputDir);
 }
 
 runGitHub()
