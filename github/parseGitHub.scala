@@ -12,22 +12,58 @@ Logger.getLogger("akka").setLevel(Level.OFF)
 import scala.util.parsing.json.JSON
 import org.apache.spark.rdd._
 
-def loadGitHubEvents(path: String):RDD[((Int,Int,Int,Int),String)] = {
+class myDateTime(_year:Int = 1970, _month:Int = 1, _day:Int = 1, _hours:Int = 0){
+    val year = _year;
+    val month = _month;
+    val day = _day;
+    val hours = _hours;
+    val season = (month-1) / 3 + 1;
+
+    override def toString(): String = 
+             "(" + year + ",Q" + season + "," + month + "," + day + "," + hours + ")";
+    
+    def toDaily(): myDateTime = new myDateTime(year, month, day, 0);
+
+    def toMonthly(): myDateTime = new myDateTime(year, month, 1, 0);
+
+    def toSeasonly(): myDateTime = new myDateTime(year, (month-1)/3 * 3 + 1, 1, 0);
+
+    def equals(that: myDateTime):Boolean = {
+        return this.year == that.year && this.month == that.month && this.day == that.day && this.hours == that.hours;
+    }
+
+    def ==(that: myDateTime):Boolean = this.equals(that);
+}
+
+def loadGitHubEvents(path: String):RDD[(myDateTime,String)] = {
     //load raw github events api json files
     //val allEvents = sqlCtx.jsonFile(path);
+    print(path);
+
     val allEvents = sc.wholeTextFiles(path);
 
-    def parseTime(fileName: String): (Int,Int,Int,Int) = {
+    def parseTime(filePath: String): myDateTime = {
+        val fileName = filePath.split('/').last;
         val fields = fileName.split(Array('-','.'));
         val year = fields(0).toInt;
         val month = fields(1).toInt;
         val day = fields(2).toInt;
         val hours = fields(3).toInt;
-        return (year, month, day, hours)
+        return new myDateTime(year, month, day, hours);
     }
+
     val flattened = allEvents.flatMap(t2 => t2._2.split('\n').map(v => parseTime(t2._1) -> v));
     
     return flattened;
+}
+
+def reduceByTime(timeToMap: RDD[(myDateTime, Map[String, Long])]): RDD[(myDateTime, Map[String, Long])] = {
+    
+    //semiAdd: (a -> 1, b -> 2) |+| (a -> 2, c -> 3) = (a -> 3, b -> 2, c -> 3)
+    def semiAdd(m1:Map[String, Long], m2:Map[String, Long]) = 
+           m1 ++ m2.map{ case (k, v) => k -> (v + m1.getOrElse(k, 0L))};
+
+    return timeToMap.reduceByKey(semiAdd);
 }
 
 def loadRepoLang(path: String):RDD[(String, List[(String, Long)])] = {
@@ -36,6 +72,7 @@ def loadRepoLang(path: String):RDD[(String, List[(String, Long)])] = {
 
     //parse to following format:
     //(repo_name:String -> List(language_name:String, count:Long))
+
     val parseToJson = allRepos.map(line => JSON.parseFull(line));
     
     val extracted = parseToJson.map(x => x.get.asInstanceOf[Map[String,Any]]);
@@ -61,9 +98,34 @@ def selMainLang(repoLang: RDD[(String,List[(String, Long)])]):RDD[(String,(Strin
     return repoMainLang;
 }
 
-def numPush(allEvents: RDD[((Int,Int,Int,Int),String)],
-            repoMainLang: RDD[(String, (String, Long))]):Unit = {
+def numPush(allEvents: RDD[(myDateTime,String)],
+            repoMainLang: RDD[(String, (String, Long))]):RDD[(myDateTime,Map[String, Long])] = {
     
+    //parse to json object
+    val parseToJson = allEvents.mapValues(line => JSON.parseFull(line));
+
+    //formatting
+    val extracted = parseToJson.mapValues(x => x.get.asInstanceOf[Map[String, Any]]);
+
+    //[(time, (event_id, event_create_time, event_repo_name, event_type))]
+    val selected = extracted.mapValues(m => (m("id"), m("created_at"), m("repo").asInstanceOf[Map[String,String]]("name"), m("type")));
+
+    val onlyPushes = selected.filter(line => line._2._4 == "PushEvent");
+
+    //[(event_repo_name, time)]
+    val repoNameAsKey = onlyPushes.map(p => p._2._3 -> p._1);
+
+    //[(event_repo_name, (time, (lang, count)))]
+    val joined = repoNameAsKey.join(repoMainLang);
+
+    //[(time, Map(lang -> 1))]
+    val buildMap = joined.map(p => p._2._1 -> Map(p._2._2._1 -> 1L));
+
+    //reduce by day!
+    //we could try others later
+    val reduced = reduceByTime(buildMap.map(p => p._1.toDaily() -> p._2));
+ 
+    return reduced;   
 }
 
 def runGitHub():Unit = {
