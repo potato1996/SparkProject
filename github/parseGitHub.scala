@@ -35,39 +35,9 @@ class myDateTime(_year:Int = 1970, _month:Int = 1, _day:Int = 1, _hours:Int = 0)
     def ==(that: myDateTime):Boolean = this.equals(that);
 }
 
-def loadGitHubEvents(path: String):RDD[(myDateTime,String)] = {
-    //load raw github events api json files
-    //val allEvents = sqlCtx.jsonFile(path);
-
-    val allEvents = sc.wholeTextFiles(path);
-
-    def parseTime(filePath: String): myDateTime = {
-        val fileName = filePath.split('/').last;
-        val fields = fileName.split(Array('-','.'));
-        val year = fields(0).toInt;
-        val month = fields(1).toInt;
-        val day = fields(2).toInt;
-        val hours = fields(3).toInt;
-        return new myDateTime(year, month, day, hours);
-    }
-
-    val flattened = allEvents.flatMap(t2 => t2._2.split('\n').map(v => parseTime(t2._1) -> v));
-    
-    return flattened;
-}
-
-def reduceByTime(timeToMap: RDD[(myDateTime, Map[String, Long])]): RDD[(myDateTime, Map[String, Long])] = {
-    
-    //semiAdd: (a -> 1, b -> 2) |+| (a -> 2, c -> 3) = (a -> 3, b -> 2, c -> 3)
-    def semiAdd(m1:Map[String, Long], m2:Map[String, Long]) = 
-           m1 ++ m2.map{ case (k, v) => k -> (v + m1.getOrElse(k, 0L))};
-
-    return timeToMap.reduceByKey(semiAdd);
-}
-
 def loadRepoLang(path: String):RDD[(String, List[(String, Long)])] = {
     //load repo lang json files
-    val allRepos = sc.textFile(path);
+    val allRepos = sc.textFile(path, 40);
 
     //parse to following format:
     //(repo_name:String -> List(language_name:String, count:Long))
@@ -100,22 +70,48 @@ def selMainLang(repoLang: RDD[(String,List[(String, Long)])]):RDD[(String,(Strin
     return repoMainLang;
 }
 
-def numPush(allEvents: RDD[(myDateTime,String)],
+def parseTime(ori: String): myDateTime = {
+    val year = ori.substring(0, 4).toInt;
+    val month = ori.substring(5, 7).toInt;
+    val day = ori.substring(8,10).toInt;
+    val hours = ori.substring(11,13).toInt;
+    return new myDateTime(year, month, day, hours);
+}
+
+def loadGitHubEvents(path: String):RDD[String] = {
+    //load raw github events api json files
+    //val allEvents = sqlCtx.jsonFile(path);
+
+    val allEvents = sc.textFile(path, 40);
+
+    return allEvents;
+}
+
+def reduceByTime(timeToMap: RDD[(myDateTime, Map[String, Long])]): RDD[(myDateTime, Map[String, Long])] = {
+    
+    //semiAdd: (a -> 1, b -> 2) |+| (a -> 2, c -> 3) = (a -> 3, b -> 2, c -> 3)
+    def semiAdd(m1:Map[String, Long], m2:Map[String, Long]) = 
+           m1 ++ m2.map{ case (k, v) => k -> (v + m1.getOrElse(k, 0L))};
+
+    return timeToMap.reduceByKey(semiAdd);
+}
+
+def numPush(allEvents: RDD[String],
             repoMainLang: RDD[(String, (String, Long))]):RDD[(myDateTime,Map[String, Long])] = {
     
     //parse to json object
-    val parseToJson = allEvents.mapValues(line => JSON.parseFull(line));
+    val parseToJson = allEvents.map(line => JSON.parseFull(line));
 
     //formatting
-    val extracted = parseToJson.mapValues(x => x.get.asInstanceOf[Map[String, Any]]);
+    val extracted = parseToJson.map(x => x.get.asInstanceOf[Map[String, Any]]);
 
-    //[(time, (event_id, event_create_time, event_repo_name, event_type))]
-    val selected = extracted.mapValues(m => (m("id"), m("created_at"), m("repo").asInstanceOf[Map[String,String]]("name"), m("type")));
+    //[(event_id, event_create_time, event_repo_name, event_type)]
+    val selected = extracted.map(m => (m("id"), m("created_at").toString, m("repo").asInstanceOf[Map[String,String]]("name"), m("type")));
 
-    val onlyPushes = selected.filter(line => line._2._4 == "PushEvent");
+    val onlyPushes = selected.filter(line => line._4 == "PushEvent");
 
     //[(event_repo_name, time)]
-    val repoNameAsKey = onlyPushes.map(p => p._2._3 -> p._1);
+    val repoNameAsKey = onlyPushes.map(p => p._3 -> parseTime(p._2));
 
     //[(event_repo_name, (time, (lang, count)))]
     val joined = repoNameAsKey.join(repoMainLang);
@@ -148,7 +144,7 @@ def runGitHub():Unit = {
     val pushReduced = numPush(allEvents, repoMainLang);
 
     val outputDir = "hdfs:///user/dd2645/SparkProject/testOut";
-    pushReduced.map(p => "(" + p._1.toString + "," + p._2.toString + ")").saveAsTextFile(outputDir);
+    pushReduced.map(p => "(" + p._1.toString + "," + p._2.toString + ")").coalesce(1).saveAsTextFile(outputDir);
 }
 
 runGitHub()
