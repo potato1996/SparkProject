@@ -12,15 +12,15 @@ Logger.getLogger("akka").setLevel(Level.OFF)
 import scala.util.parsing.json.JSON
 import org.apache.spark.rdd._
 
-class myDateTime(_year:Int = 1970, _month:Int = 1, _day:Int = 1, _hours:Int = 0){
+class myDateTime(_year:Int = 1970, _month:Int = 1, _day:Int = 1, _hour:Int = 0){
     val year = _year;
     val month = _month;
     val day = _day;
-    val hours = _hours;
+    val hour = _hour;
     val season = (month-1) / 3 + 1;
 
     override def toString(): String = 
-             "(" + year + ",Q" + season + "," + month + "," + day + "," + hours + ")";
+             "(" + year + ",Q" + season + "," + month + "," + day + "," + hour + ")";
     
     def toDaily(): myDateTime = new myDateTime(year, month, day, 0);
 
@@ -29,10 +29,26 @@ class myDateTime(_year:Int = 1970, _month:Int = 1, _day:Int = 1, _hours:Int = 0)
     def toSeasonly(): myDateTime = new myDateTime(year, (month-1)/3 * 3 + 1, 1, 0);
 
     def equals(that: myDateTime):Boolean = {
-        return this.year == that.year && this.month == that.month && this.day == that.day && this.hours == that.hours;
+        return this.year == that.year && this.month == that.month && this.day == that.day && this.hour == that.hour;
     }
 
-    def ==(that: myDateTime):Boolean = this.equals(that);
+    def == (that: myDateTime):Boolean = this.equals(that);
+
+    def < (that: myDateTime):Boolean = {
+        if(this.year != that.year) return this.year < that.year;
+        if(this.month != that.month) return this.month < that.month;
+        if(this.day != that.day) return this.day < that.day;
+        if(this.hour != that.hour) return this.hour < that.hour;
+        return false;
+    }
+
+    def != (that: myDateTime):Boolean = !(this == that);
+
+    def <= (that: myDateTime):Boolean = (this < that) || (this == that);
+
+    def > (that: myDateTime):Boolean = !(this <= that);
+
+    def >= (that: myDateTime):Boolean = !(this < that);
 }
 
 def loadRepoLang(path: String):RDD[(String, List[(String, Long)])] = {
@@ -116,12 +132,16 @@ def numPush(allEvents: RDD[String],
     //[(event_repo_name, (time, (lang, count)))]
     val joined = repoNameAsKey.join(repoMainLang);
 
+    println(joined.count);
+
     //[(time, Map(lang -> 1))]
     val buildMap = joined.map(p => p._2._1 -> Map(p._2._2._1 -> 1L));
 
     //reduce by day!
     //we could try others later
     val reduced = reduceByTime(buildMap.map(p => p._1.toDaily() -> p._2));
+
+    println(reduced.count);
  
     return reduced;   
 }
@@ -129,7 +149,7 @@ def numPush(allEvents: RDD[String],
 def runGitHub():Unit = {
     //load github events
     //for now just test on monthly data - much faster :P
-    val EventPath = "hdfs:///user/dd2645/github_raw/after2015/2017-01-*";
+    val EventPath = "hdfs:///user/dd2645/github_raw/after2015/2017-04-01-*";
     val allEvents = loadGitHubEvents(EventPath);
 
     //load github repo language
@@ -143,7 +163,7 @@ def runGitHub():Unit = {
 
     val pushReduced = numPush(allEvents, repoMainLang);
 
-    val outputDir = "hdfs:///user/dd2645/SparkProject/testOut";
+    val outputDir = "hdfs:///user/dd2645/SparkProject/testOut1";
     pushReduced.map(p => "(" + p._1.toString + "," + p._2.toString + ")").coalesce(1).saveAsTextFile(outputDir);
 }
 
