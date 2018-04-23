@@ -58,7 +58,7 @@ import org.apache.spark.rdd._
         val topLangList = getTopLangList(repoMainLang, 100);
 
         val pushReduced = getNumPush(allEvents, 
-            repoMainLang, truncToMonth).
+            repoMainLang, truncToSeason).
             mapValues(m => m.filterKeys(topLangList.contains(_)));
 
         val pushPercentage = transToPercent(pushReduced);
