@@ -30,10 +30,12 @@ This part contains analysis code of stackoverflow data
 
 **How to run?**
 
-Run the scala script in spark-shell
+1. Compile stakeApp.scala
 
-**NOTE: After all development finish, 2 and 3 will be built as
-standalone applications, and build script will be provided**
+2. spark-submit the compiled .jar package
+
+**NOTE: After all development finish, 2 and 3 will be built together
+as one standalone application, and build script will be provided**
 
 ### 3. Analysis GitHub: ${PROJECTROOT}/github
 
@@ -43,6 +45,8 @@ This part contains analysis code of github data
 
 Run the scala scrip in spark-shell in following order:
 
+langList.scala
+
 loadGitHubData.scala
 
 parseRepoLang.scala
@@ -51,8 +55,8 @@ parseEvents.scala
 
 scoreGitHub.scala
 
-**NOTE: After all development finish, 2 and 3 will be built as
-standalone applications, and build script will be provided**
+**NOTE: After all development finish, 2 and 3 will be built together
+as one standalone application, and build script will be provided**
 
 ### 4. Web UI part: ${PROJECTROOT}/Spark-UI
 

@@ -42,7 +42,7 @@ import org.apache.spark.rdd._
     def runGitHub():Unit = {
         //load github events
         //for now just test on monthly data - much faster :P
-        val EventPath = "hdfs:///user/dd2645/github_raw/after2015/2017-04-*";
+        val EventPath = "hdfs:///user/dd2645/github_raw/after2015/2018-*";
         val allEvents = loadGitHubEvents(EventPath,sc);
 
         //load github repo language
@@ -54,8 +54,9 @@ import org.apache.spark.rdd._
         val repoMainLang = selMainLang(repoLang);
         repoMainLang.persist();
 
-        //Get the top language list
-        val topLangList = getTopLangList(repoMainLang, 100);
+        //Get the instrested language list
+        //val topLangList = getTopLangList(repoMainLang, 100);
+        val topLangList = langList;
 
         val pushReduced = getNumPush(allEvents, 
             repoMainLang, truncToSeason).
