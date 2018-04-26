@@ -1,3 +1,9 @@
+//Author: Dayou Du(2018)
+//Email : dayoudu@nyu.edu
+//---------------------------------------------------------------------
+
+
+
 import org.apache.spark.rdd._
 import org.apache.spark.SparkContext
 import scala.util.parsing.json.JSON

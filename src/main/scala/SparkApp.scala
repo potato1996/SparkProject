@@ -1,7 +1,6 @@
-/**
-  * Author: Spikerman
-  * Created Date: 4/16/18
-  */
+//Author: Spikerman
+//Created Date: 4/16/18
+//----------------------------------------------------------------
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -14,41 +13,6 @@ import org.bson.Document
 import scala.xml._
 /*
 object StackOverflow {
-
-  val isLocalMode: Boolean = true
-
-  def hasTag(xmlString: String): Boolean = {
-    val tag = XML.loadString(xmlString) \\ "row" \ "@Tags"
-    tag.nonEmpty
-  }
-
-  val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS")
-  val cal = Calendar.getInstance()
-
-  def getPosts(xmlString: String): (String, Set[String]) = {
-    val node = XML.loadString(xmlString) \\ "row"
-
-    val tagsString = (node \ "@Tags").text
-    val tmpTagSet = tagsString
-      .split("(<)|(>)", -1)
-      .toSet - "" // remove "<" and ">", remove empty string
-
-    val tags = tmpTagSet.map(tag => tag.toLowerCase) // convert all tags to lowercase
-
-    val dateString = (node \ "@CreationDate").text
-
-    val date = sdf.parse(dateString)
-
-    cal.setTime(date)
-
-    val year = cal.get(Calendar.YEAR)
-
-    val month = cal.get(Calendar.MONTH)
-
-    val season = (month - 1) / 3 + 1
-
-    (year + "" + season, tags)
-  }
 
   //word count function, return the map sorted by value
   def countWords(languages: Iterable[String], date: String) = {
@@ -124,7 +88,8 @@ object PotatoTest{
 
         //test output
         val outputDir = "hdfs:///user/dd2645/SparkProject/testOut3";
-        Common.combineScore(GitHubScoreList, weightList).map(p => "(" + p._1.toString + "," + p._2.toString + ")").coalesce(1).saveAsTextFile(outputDir);
+        val combinedScore = Common.combineScore(GitHubScoreList, weightList);
+        combinedScore.map(p => "(" + p._1.toString + "," + p._2.toString + ")").coalesce(1).saveAsTextFile(outputDir);
         sc.stop()
     }
     def main(args: Array[String]) {
