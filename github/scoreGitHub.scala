@@ -27,8 +27,8 @@ import org.apache.spark.rdd._
             };
             rddList.zip(weightList).
                    reduce((p1:(RDD[(String, Map[String,Double])], Double), 
-                           p2:(RDD[(String, Map[String,Double])], Double)) =>
-                            (combineTwo(p1._1, p2._1, p1._2, p2._2), p1._2 + p2._2))._1;
+                           p2:(RDD[(String, Map[String,Double])], Double)) => {
+                            (combineTwo(p1._1, p2._1, p1._2, p2._2), p1._2 + p2._2)})._1;
             
         }
 
@@ -41,9 +41,10 @@ import org.apache.spark.rdd._
 
     def runGitHub():Unit = {
         //load github events
-        //for now just test on monthly data - much faster :P
-        val EventPath = "hdfs:///user/dd2645/github_raw/after2015/2018-*";
-        val allEvents = loadGitHubEvents(EventPath,sc);
+        val EventPath = "hdfs:///user/dd2645/github_raw/after2015/2018-03-01*";
+        val EventList = List("PushEvent","PullRequestEvent","IssuesEvent","WatchEvent" );
+        val allEvents = loadGitHubEvents(EventPath, EventList, sc);
+        allEvents.persist();
 
         //load github repo language
         //original json data from google big query open data set
@@ -55,18 +56,21 @@ import org.apache.spark.rdd._
         repoMainLang.persist();
 
         //Get the instrested language list
-        //val topLangList = getTopLangList(repoMainLang, 100);
         val topLangList = langList;
 
-        val pushReduced = getNumPush(allEvents, 
-            repoMainLang, truncToSeason).
-            mapValues(m => m.filterKeys(topLangList.contains(_)));
+        val aggregated = EventList.
+            map(eventName => {
+                aggSpecEvent(eventName, allEvents, repoMainLang, truncToSeason).
+                mapValues(m => m.filterKeys(topLangList.contains(_)))});
 
-        val pushPercentage = transToPercent(pushReduced);
+        val ScorePercentage = aggregated.map(rdd => transToPercent(rdd));
+        //val pushPercentage = transToPercent(pushReduced);
+
+        val weightList = List(0.25, 0.25, 0.25, 0.25);
 
         //test output
-        val outputDir = "hdfs:///user/dd2645/SparkProject/testOut";
-        pushPercentage.map(p => "(" + p._1.toString + "," + p._2.toString + ")").coalesce(1).saveAsTextFile(outputDir);
+        val outputDir = "hdfs:///user/dd2645/SparkProject/testOut2";
+        combineScore(ScorePercentage, weightList).map(p => "(" + p._1.toString + "," + p._2.toString + ")").coalesce(1).saveAsTextFile(outputDir);
     }
 
 

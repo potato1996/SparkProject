@@ -2,8 +2,7 @@ import org.apache.spark.rdd._
 
 //TODO: wrap this up
 
-   def selMainLang(repoLang: RDD[(String,List[(String, Long)])])
-           :RDD[(String,(String,Long))] = {
+   val selMainLang = (repoLang: RDD[(String,List[(String, Long)])]) => {
         //From (repo_name:String -> List(language_name:String, count:Long))
         //To   (repo_name:String -> (major_language_name:String, count:Long))
         //Here is a trick, sort by decending order using "-"
@@ -13,12 +12,14 @@ import org.apache.spark.rdd._
         });
 
         //filter out dummy repos
-        return repoMainLang.filter(p => p._2._2 > 100);
+        repoMainLang.filter(p => p._2._2 > 100);
     }
 
     //generate top language list.(contains topCount elements)
-    def getTopLangList(repoMainLang:RDD[(String,(String,Long))],
-           topCount:Int) :List[String] = {
+    val getTopLangList = (repoMainLang:RDD[(String,(String,Long))],
+           topCount:Int) => {
+
+        //To List[String]
 
         val langAsKey = repoMainLang.map(p => p._2._1 -> 1);
 
@@ -27,7 +28,7 @@ import org.apache.spark.rdd._
         val sorted = countLang.sortWith((t1:(String, Int), t2:(String, Int)) =>
                                              t1._2 > t2._2);
 
-        return sorted.take(topCount).toList.map(p => p._1);
+        sorted.take(topCount).toList.map(p => p._1);
     }
 
 

@@ -2,8 +2,7 @@ import org.apache.spark.rdd._
 import org.apache.spark.SparkContext
 import scala.util.parsing.json.JSON
 
-    def loadRepoLang(path: String, sc:SparkContext)
-        :RDD[(String, List[(String, Long)])] = {
+    val loadRepoLang = (path: String, sc:SparkContext) => {
         //load repo lang json files
         val allRepos = sc.textFile(path, 40);
 
@@ -23,15 +22,28 @@ import scala.util.parsing.json.JSON
     
         val formatted3 = formatted2.mapValues(v => v.asInstanceOf[List[Map[String,String]]].map(m => (m("name"), m("bytes").toLong)));
 
-        return formatted3;
+        //RDD[(String, List[(String, Long)])]
+        formatted3;
     }
-    def loadGitHubEvents(path: String, sc:SparkContext):RDD[String] = {
+    val loadGitHubEvents = (path: String, eventList:List[String], sc:SparkContext) => {
         //load raw github events api json files
         //val allEvents = sqlCtx.jsonFile(path);
 
         val allEvents = sc.textFile(path, 40);
 
-        return allEvents;
-    }
+        //parse to json object
+        val parseToJson = allEvents.map(line => JSON.parseFull(line));
+
+        //formatting
+        val extracted = parseToJson.map(x => x.get.asInstanceOf[Map[String, Any]]);
+
+        //[(event_id, event_create_time, event_repo_name, event_type)]
+        val selected = extracted.map(m => (m("id").toString, m("created_at").toString, m("repo").asInstanceOf[Map[String,String]]("name"), m("type").toString));
+
+        val filtered = selected.filter(line => eventList.contains(line._4));
+
+        //[(event_id, event_create_time, event_repo_name, event_type)]
+        filtered;
+   }
 
 

@@ -26,21 +26,12 @@ import scala.util.parsing.json.JSON
         timeToMap.reduceByKey(semiAdd);
     }
 
-    val getNumPush = (allEvents: RDD[String],
+    val aggSpecEvent = (eventName:String,
+            allEvents: RDD[(String, String, String, String)],
             repoMainLang: RDD[(String, (String, Long))],
             truncTimePeriod: String => String) => {
-            //:RDD[(String,Map[String, Long])] = {
 
-        //parse to json object
-        val parseToJson = allEvents.map(line => JSON.parseFull(line));
-
-        //formatting
-        val extracted = parseToJson.map(x => x.get.asInstanceOf[Map[String, Any]]);
-
-        //[(event_id, event_create_time, event_repo_name, event_type)]
-        val selected = extracted.map(m => (m("id"), m("created_at").toString, m("repo").asInstanceOf[Map[String,String]]("name"), m("type")));
-
-        val onlyPushes = selected.filter(line => line._4 == "PushEvent");
+        val onlyPushes = allEvents.filter(line => line._4 == eventName);
 
         //[(event_repo_name, time)]
         val repoNameAsKey = onlyPushes.map(p => p._3 -> parseTime(p._2));
@@ -52,7 +43,7 @@ import scala.util.parsing.json.JSON
         val buildMap = joined.map(p => p._2._1 -> Map(p._2._2._1 -> 1L));
 
         //reduce as selected time interval
-        val reduced = reduceByTime(buildMap.map(p => truncToMonth(p._1) -> p._2));
+        val reduced = reduceByTime(buildMap.map(p => truncTimePeriod(p._1) -> p._2));
 
         reduced.mapValues(m => m.filter(kv => kv._2 >= 100));
     }
