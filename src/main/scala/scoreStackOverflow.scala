@@ -61,7 +61,7 @@ object ScoreStackOverflow{
         mmap.toMap[String, Long]
     }
 
-    def scoreStackOverFlow(sourceFile: String,
+    def scoreStackOverflow(sourceFile: String,
                           sc:SparkContext):RDD[(String,Map[String,Double])] = {
 
         val rowData = sc.textFile(sourceFile).filter(line => line.contains("row"))
@@ -77,9 +77,13 @@ object ScoreStackOverflow{
         // tag count map
         val tagsCnt = monthlyTags.map(fields => (fields._1, countWords(fields._2, fields._1)));
 
-        val filtered = tagsCnt.mapValues(m => m.filterKeys(Common.langList.contains(_)));
+        val filtered = tagsCnt.mapValues(m => m.filterKeys(Common.tagLangList.contains(_)));
 
-        val ScorePercentage = Common.transToPercent(filtered);
+        val langMap = Common.tagLangList.zip(Common.langList).toMap;
+
+        val toStandardName = filtered.mapValues(m => m.map(p => langMap(p._1) -> p._2));
+
+        val ScorePercentage = Common.transToPercent(toStandardName);
 
         return ScorePercentage;
     }

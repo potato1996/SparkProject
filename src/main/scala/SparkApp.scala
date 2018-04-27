@@ -9,8 +9,10 @@ import com.mongodb.spark.MongoSpark
 import com.mongodb.spark.config._
 import org.apache.spark.{SparkConf, SparkContext}
 import org.bson.Document
-
+import org.apache.log4j.Logger
+import org.apache.log4j.Level
 import scala.xml._
+import org.apache.spark.rdd.RDD
 /*
 object StackOverflow {
 
@@ -76,21 +78,49 @@ object StackOverflow {
 */
 
 object PotatoTest{
+    val convertAndSave = (res: RDD[(String, Map[String, Double])], 
+                          serverAddr: String,
+                          tableName: String) =>{
+        //val writeConfig = WriteConfig(Map("uri" -> (serverAddr + "." + tableName)));
+
+        val flattened = res.flatMap(m => m._2.toSeq.map(p => {
+            val timeStr = m._1;
+            val name = p._1;
+            val score = p._2;
+            val _id = timeStr + name;
+            val jsonstr = "{"  + 
+                  "_id: "      + s""""${_id}""""     + ", " +
+                  "time: "     + s""""${timeStr}"""" + ", " + 
+                  "language: " + s""""${name}""""    + ", " + 
+                  "score: "    + score + "}";
+            jsonstr;
+        }));
+         
+        flattened;
+    }
+
     def runAll(){
         val sc = new SparkContext();
-
+	Logger.getLogger("org").setLevel(Level.OFF);
+	Logger.getLogger("akka").setLevel(Level.OFF);
         val GitHubEventPath = "hdfs:///user/dd2645/github_raw/after2015/2018-03-01*";
         val GitHubRepoLangPath = "hdfs:///user/dd2645/github_repo_language/github.json";
-        val GitHubScoreList = ScoreGitHub.scoreGitHub(GitHubEventPath,
-                                  GitHubRepoLangPath,
-                                  sc);
+        val SFPostPath = "hdfs:///user/hc2416/FinalProject/Posts.xml";
+        val SFScore = ScoreStackOverflow.scoreStackOverflow(SFPostPath, sc);
+        //val GitHubScoreList = ScoreGitHub.scoreGitHub(GitHubEventPath,
+        //                          GitHubRepoLangPath,
+        //                          sc);
         val weightList = List(0.25, 0.25, 0.25, 0.25);
 
         //test output
-        val outputDir = "hdfs:///user/dd2645/SparkProject/testOut3";
-        val combinedScore = Common.combineScore(GitHubScoreList, weightList);
-        combinedScore.map(p => "(" + p._1.toString + "," + p._2.toString + ")").coalesce(1).saveAsTextFile(outputDir);
+        val outputDir = "hdfs:///user/dd2645/SparkProject/testOut2";
+        //val combinedScore = Common.combineScore(GitHubScoreList, weightList);
+        //println(SFScore.count);
+        //SFScore.map(p => "(" + p._1.toString + "," + p._2.toString + ")").coalesce(5).saveAsTextFile(outputDir);
+        val flattened = convertAndSave(SFScore, "", "");
+        flattened.coalesce(5).saveAsTextFile(outputDir);
         sc.stop()
+
     }
     def main(args: Array[String]) {
         //val input = "FinalProject/Posts.xml"

@@ -12,15 +12,15 @@ object parseEvents{
         val day = ori.substring(8,10);
         val hours = ori.substring(11,13);
         val season = (month.toInt - 1) / 3 + 1;
-        year + "-Q" + season.toString + 
-               "-" + month + 
-               "-" + day + 
-               "-" + hours;
+        year + season.toString + 
+              month + 
+              day + 
+              hours;
     }
 
-    val truncToSeason = (dateTime:String) => dateTime.substring(0, 7);
+    val truncToSeason = (dateTime:String) => dateTime.substring(0, 5);
 
-    val truncToMonth = (dateTime:String) => dateTime.substring(0, 10);
+    val truncToMonth = (dateTime:String) => dateTime.substring(0, 7);
 
     val reduceByTime = (timeToMap: RDD[(String, Map[String, Long])]) => {
 
