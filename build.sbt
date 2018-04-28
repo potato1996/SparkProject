@@ -1,4 +1,4 @@
-name := "PotatoTest"
+name := "PotatoFinalProject"
 version := "1.0"
 scalaVersion := "2.11.8"
 

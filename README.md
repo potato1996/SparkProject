@@ -60,21 +60,40 @@ This part contains analysis code of StackOverflow&GitHub data
 
 If you would like to connect to UI module, please set `spark.MONGO_URI`, like:
 
-`spark2-submit --conf spark.MONGO_URI=mongodb://{username}:{passwd}@{serverIP}:{portNum}/{dbname} \`
+`spark2-submit --conf "spark.MONGO_URI=mongodb://{username}:{passwd}@{serverIP}:{portNum}/{dbname}" \`
 
-`              --conf spark.network.timeout=20s \`
+`              --conf "spark.network.timeout=1200s" \`
 
-`              --executor-memory 3g \`
+`              --conf "spark.dynamicAllocation.maxExecutors=450" \`
 
-`              {path-to-the-jar-package}`
+`              --conf "spark.ui.port=10101" \`
+
+`              --executor-memory 2g \`
+
+`              ./target/scala-2.11/PotatoFinalProject-assembly-1.0.jar`
 
 If you would like to run Spark part ONLY, just ignore the `spark.MONGO_URI` configue, like:
 
-`spark2-submit --conf spark.network.timeout=20s \`
+`spark2-submit --conf "spark.network.timeout=1200s" \`
 
-`              --executor-memory 3g \`
+`              --conf "spark.dynamicAllocation.maxExecutors=450" \`
 
-`              {path-to-the-jar-package}`
+`              --conf "spark.ui.port=10101" \`
+
+`              --executor-memory 2g \`
+
+`              ./target/scala-2.11/PotatoFinalProject-assembly-1.0.jar`
+
+**IMPORTANT NOTE**
+
+The program is really huge and would run about 20hours. 
+
+`spark.network.timeout` and `--executor-memory` is importent here.
+(should be set at least as much as the example above).
+
+`spark.dynamicAllocation.maxExecutors` is set because by default Spark
+would spawn as much executors as possible. But we do NOT want to occupy
+all the CPU resources. (which would be killed by Admin :P)
 
 
 ### 3. Web UI part: ${PROJECTROOT}/Spark-UI

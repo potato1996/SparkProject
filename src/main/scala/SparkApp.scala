@@ -1,5 +1,5 @@
-//Author: Spikerman
-//Created Date: 4/16/18
+//Author: Dayou Du(2018)
+//Email : dayoudu@nyu.edu
 //----------------------------------------------------------------
 
 import java.text.SimpleDateFormat
@@ -15,15 +15,14 @@ import scala.xml._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
 
-object PotatoTest{
+object PotatoFinalProject{
     var writeMongoDB: Boolean = false;
     var MongoDB_URI: String = "";
     val OutDir = "hdfs:///user/dd2645/SparkProject/TestOut";
 
     def convertAndWrite(res: RDD[(String, Map[String, Double])], 
                        tableName: String){
-        val writeConfig = WriteConfig(Map("uri" -> (MongoDB_URI + "." + tableName),
-                                          "writeConcern.w" -> "majority"));
+        val writeConfig = WriteConfig(Map("uri" -> (MongoDB_URI + "." + tableName)));
         
         val flattened = res.flatMap(m => m._2.toSeq.map(p => {
             val timeStr = m._1;
@@ -68,8 +67,8 @@ object PotatoTest{
         val conf = new SparkConf();
         
         //ignore chatty messages
-	Logger.getLogger("org").setLevel(Level.OFF);
-	Logger.getLogger("akka").setLevel(Level.OFF);
+	//Logger.getLogger("org").setLevel(Level.OFF);
+	//Logger.getLogger("akka").setLevel(Level.OFF);
         
         //set mongodb address
         val dbconf = conf.getOption("spark.MONGO_URI");
@@ -86,7 +85,7 @@ object PotatoTest{
         }
 
         //input paths
-        val GitHubEventPath = "hdfs:///user/dd2645/github_raw/after2015/2018-03-01*";
+        val GitHubEventPath = "hdfs:///user/dd2645/github_raw/after2015/*";
         val GitHubRepoLangPath = "hdfs:///user/dd2645/github_repo_language/github.json";
         val SFPostPath = "hdfs:///user/hc2416/FinalProject/Posts.xml";
         
@@ -113,7 +112,7 @@ object PotatoTest{
 
         val allTables = SFScore._2 :: (combinedScore :: (SFScore._1 :: GitHubScoreList));
         
-        allTables.foreach(_.persist(StorageLevel.MEMORY_AND_DISK));
+        allTables.foreach(_.persist());
        
         if(writeMongoDB){
               allTables.zip(tableNames).foreach(p => convertAndWrite(p._1, p._2));
@@ -121,7 +120,7 @@ object PotatoTest{
               allTables.zip(tableNames).foreach(p => convertAndSave(p._1, p._2));
         }
 
-        sc.stop();
+        //sc.stop();
     }
     def main(args: Array[String]) {
         runAll();   
