@@ -22,8 +22,9 @@ object PotatoTest{
 
     def convertAndWrite(res: RDD[(String, Map[String, Double])], 
                        tableName: String){
-        val writeConfig = WriteConfig(Map("uri" -> (MongoDB_URI + "." + tableName)));
-
+        val writeConfig = WriteConfig(Map("uri" -> (MongoDB_URI + "." + tableName),
+                                          "writeConcern.w" -> "majority"));
+        
         val flattened = res.flatMap(m => m._2.toSeq.map(p => {
             val timeStr = m._1;
             val name = p._1;
@@ -40,6 +41,8 @@ object PotatoTest{
         val documents = flattened.map(line => Document.parse(line));
 
         MongoSpark.save(documents, writeConfig);
+
+        println("Collection " + tableName + "Save Count = " + documents.count);
     }
     val convertAndSave = (res: RDD[(String, Map[String, Double])], 
                        tableName: String) => {
@@ -97,10 +100,8 @@ object PotatoTest{
 
         //weights to combine overall score
         val weightList = List(0.4, 0.15, 0.15, 0.15, 0.15);
-        //val weightList = List(0.4, 0.2, 0.2, 0.2);
 
         val combinedScore = Common.combineScore(SFScore._1::GitHubScoreList, weightList);
-        //val combinedScore = Common.combineScore(GitHubScoreList, weightList);
         
         val tableNames = List("Tech",
                               "LangCombined",
@@ -109,17 +110,14 @@ object PotatoTest{
                               "NumPR",
                               "NumIssue",
                               "NumStar");
-        //val tableNames = List("LangCombined", "NumPush", "NumPR", "NumIssue", "NumStar");
 
         val allTables = SFScore._2 :: (combinedScore :: (SFScore._1 :: GitHubScoreList));
-        //val allTables = combinedScore :: GitHubScoreList;
         
         allTables.foreach(_.persist(StorageLevel.MEMORY_AND_DISK));
        
         if(writeMongoDB){
-              //allTables.zip(tableNames).foreach(p => convertAndWrite(p._1, p._2));
+              allTables.zip(tableNames).foreach(p => convertAndWrite(p._1, p._2));
         }else{
-              //convertAndSave(SFScore._2, "Tech");
               allTables.zip(tableNames).foreach(p => convertAndSave(p._1, p._2));
         }
 
