@@ -60,21 +60,21 @@ This part contains analysis code of StackOverflow&GitHub data
 
 If you would like to connect to UI module, please set `spark.MONGO_URI`, like:
 
-`spark2-submit --conf spark.MONGO_URI=mongodb://<username>:<passwd>@<serverIP>:<portNum>/<dbname> \
+`spark2-submit --conf spark.MONGO_URI=mongodb://{username}:{passwd}@{serverIP}:{portNum}/{dbname} \`
 
---conf spark.network.timeout=20s \
+`              --conf spark.network.timeout=20s \`
 
---executor-memory 3g \
+`              --executor-memory 3g \`
 
-<path-to-the-jar-package>`
+`              {path-to-the-jar-package}`
 
 If you would like to run Spark part ONLY, just ignore the `spark.MONGO_URI` configue, like:
 
-`spark2-submit --conf spark.network.timeout=20s \
+`spark2-submit --conf spark.network.timeout=20s \`
 
---executor-memory 3g \
+`              --executor-memory 3g \`
 
-<path-to-the-jar-package>`
+`              {path-to-the-jar-package}`
 
 
 ### 3. Web UI part: ${PROJECTROOT}/Spark-UI
