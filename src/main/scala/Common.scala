@@ -117,4 +117,21 @@ object Common{
 	"html",
 	"verilog",
 	"elisp");
+
+
+    val techList = List(
+        "React.js",
+        "Angular.js",
+        "Vue.js",
+        "Backbone.js",
+        "Ember.js",
+        "jQuery");
+
+    val tagTechList = List(
+        "reactjs",
+        "angularjs",
+        "vue.js",
+        "backbone.js",
+        "ember.js",
+        "jquery");
 }

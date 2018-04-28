@@ -13,75 +13,16 @@ import org.apache.log4j.Logger
 import org.apache.log4j.Level
 import scala.xml._
 import org.apache.spark.rdd.RDD
-/*
-object StackOverflow {
-
-  //word count function, return the map sorted by value
-  def countWords(languages: Iterable[String], date: String) = {
-
-    val map = scala.collection.mutable.Map.empty[String, Double].withDefaultValue(0)
-
-    for (language <- languages) {
-      val key = date + ":" + language
-      map(key) += 1
-    }
-
-    val maxFreq: Double = map.valuesIterator.max
-    val factor: Double = 100 / maxFreq
-
-    val rs = map.map(field => (field._1, field._2 * factor))
-
-    //scala.collection.immutable.ListMap(map.toSeq.sortWith(_._2 > _._2): _*)
-    rs
-  }
-
-  def runStackOverFlow(sourceFile: String, outputFile: String) {
-    var sf = sourceFile
-    var of = outputFile
-    if (isLocalMode) {
-      sf = "file:///Users/chenhao/IdeaProjects/Spark/" + sourceFile
-      of = "file:///Users/chenhao/IdeaProjects/Spark/" + outputFile
-    }
-    //configure spark context
-    val sparkLocalConf = new SparkConf().setAppName("StackOverflow")
-    //configure mongodb write operation
-
-    val sc = if (isLocalMode) new SparkContext(sparkLocalConf) else new SparkContext()
-
-
-    // export MONGO_URL= "mongodb://127.0.0.1"
-    val writeConfig = WriteConfig(Map("uri" -> "mongodb://127.0.0.1/spark.output"))
-
-    val rowData = sc.textFile(sf).filter(line => line.contains("row"))
-
-    val data = rowData.filter(line => hasTag(line))
-
-    val pairs = data.map(line => getPosts(line))
-
-    val monthlyTags = pairs.map(fields => (fields._1, fields._2))
-      .groupByKey()
-      .map(fields => (fields._1, fields._2.flatMap(tagSet => tagSet.toList)))
-
-    // tag count map
-    val tagsCnt = monthlyTags.map(fields => (fields._1, countWords(fields._2, fields._1)))
-
-    //tagsCnt.flatMap(fields => fields._2).map(fields => "{" + "time: " + fields._1.split(":")(0).toInt + ", " + "language: " + s""""${fields._1.split(":")(1)}"""" + ", " + "score: " + fields._2 + "}").foreach(println)
-
-    val documents = tagsCnt.flatMap(fields => fields._2).map(fields => Document.parse("{" + "time: " + fields._1.split(":")(0).toInt + ", " + "language: " + s""""${fields._1.split(":")(1)}"""" + ", " + "score: " + fields._2 + "}"))
-
-    MongoSpark.save(documents, writeConfig)
-
-    sc.stop()
-
-    println("Success")
-  }
-*/
+import org.apache.spark.storage.StorageLevel
 
 object PotatoTest{
-    val convertAndSave = (res: RDD[(String, Map[String, Double])], 
-                          serverAddr: String,
-                          tableName: String) =>{
-        //val writeConfig = WriteConfig(Map("uri" -> (serverAddr + "." + tableName)));
+    var writeMongoDB: Boolean = false;
+    var MongoDB_URI: String = "";
+    val OutDir = "hdfs:///user/dd2645/SparkProject/TestOut";
+
+    def convertAndWrite(res: RDD[(String, Map[String, Double])], 
+                       tableName: String){
+        val writeConfig = WriteConfig(Map("uri" -> (MongoDB_URI + "." + tableName)));
 
         val flattened = res.flatMap(m => m._2.toSeq.map(p => {
             val timeStr = m._1;
@@ -96,37 +37,96 @@ object PotatoTest{
             jsonstr;
         }));
          
-        flattened;
+        val documents = flattened.map(line => Document.parse(line));
+
+        MongoSpark.save(documents, writeConfig);
+    }
+    val convertAndSave = (res: RDD[(String, Map[String, Double])], 
+                       tableName: String) => {
+
+        val flattened = res.flatMap(m => m._2.toSeq.map(p => {
+            val timeStr = m._1;
+            val name = p._1;
+            val score = p._2;
+            val _id = timeStr + name;
+            val jsonstr = "{"  + 
+                  "_id: "      + s""""${_id}""""     + ", " +
+                  "time: "     + s""""${timeStr}"""" + ", " + 
+                  "language: " + s""""${name}""""    + ", " + 
+                  "score: "    + score + "}";
+            jsonstr;
+        }));
+         
+        flattened.coalesce(5).saveAsTextFile(OutDir + "/" + tableName);
     }
 
     def runAll(){
         val sc = new SparkContext();
+        val conf = new SparkConf();
+        
+        //ignore chatty messages
 	Logger.getLogger("org").setLevel(Level.OFF);
 	Logger.getLogger("akka").setLevel(Level.OFF);
+        
+        //set mongodb address
+        val dbconf = conf.getOption("spark.MONGO_URI");
+        dbconf match{
+            case Some(s) => {
+                 MongoDB_URI = s;
+                 writeMongoDB = true;
+                 println("MONGO_URI set. Will try connect to MongoDB:" + MongoDB_URI);
+            }
+            case _ => {
+                 writeMongoDB = false;
+                 println("MONGO_URI NOT set. Will try save to dir:" + OutDir);
+            }
+        }
+
+        //input paths
         val GitHubEventPath = "hdfs:///user/dd2645/github_raw/after2015/2018-03-01*";
         val GitHubRepoLangPath = "hdfs:///user/dd2645/github_repo_language/github.json";
         val SFPostPath = "hdfs:///user/hc2416/FinalProject/Posts.xml";
+        
+        //Score StackOverflow
         val SFScore = ScoreStackOverflow.scoreStackOverflow(SFPostPath, sc);
-        //val GitHubScoreList = ScoreGitHub.scoreGitHub(GitHubEventPath,
-        //                          GitHubRepoLangPath,
-        //                          sc);
-        val weightList = List(0.25, 0.25, 0.25, 0.25);
+        
+        //Score GitHub
+        val GitHubScoreList = ScoreGitHub.scoreGitHub(GitHubEventPath,
+                                  GitHubRepoLangPath,
+                                  sc);
 
-        //test output
-        val outputDir = "hdfs:///user/dd2645/SparkProject/testOut2";
+        //weights to combine overall score
+        val weightList = List(0.4, 0.15, 0.15, 0.15, 0.15);
+        //val weightList = List(0.4, 0.2, 0.2, 0.2);
+
+        val combinedScore = Common.combineScore(SFScore._1::GitHubScoreList, weightList);
         //val combinedScore = Common.combineScore(GitHubScoreList, weightList);
-        //println(SFScore.count);
-        //SFScore.map(p => "(" + p._1.toString + "," + p._2.toString + ")").coalesce(5).saveAsTextFile(outputDir);
-        val flattened = convertAndSave(SFScore, "", "");
-        flattened.coalesce(5).saveAsTextFile(outputDir);
-        sc.stop()
+        
+        val tableNames = List("Tech",
+                              "LangCombined",
+                              "NumPost",
+                              "NumPush",
+                              "NumPR",
+                              "NumIssue",
+                              "NumStar");
+        //val tableNames = List("LangCombined", "NumPush", "NumPR", "NumIssue", "NumStar");
 
+        val allTables = SFScore._2 :: (combinedScore :: (SFScore._1 :: GitHubScoreList));
+        //val allTables = combinedScore :: GitHubScoreList;
+        
+        allTables.foreach(_.persist(StorageLevel.MEMORY_AND_DISK));
+       
+        if(writeMongoDB){
+              //allTables.zip(tableNames).foreach(p => convertAndWrite(p._1, p._2));
+        }else{
+              //convertAndSave(SFScore._2, "Tech");
+              allTables.zip(tableNames).foreach(p => convertAndSave(p._1, p._2));
+        }
+
+        sc.stop();
     }
     def main(args: Array[String]) {
-        //val input = "FinalProject/Posts.xml"
-        //val output = "FinalProject/Result"
-        //runStackOverFlow(input, output)
-        runAll();
+        runAll();   
     }
 }
 

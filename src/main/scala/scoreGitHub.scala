@@ -5,6 +5,7 @@
 import org.apache.spark.SparkContext
 import scala.util.parsing.json.JSON
 import org.apache.spark.rdd._
+import org.apache.spark.storage.StorageLevel
 
 object ScoreGitHub{
     def scoreGitHub(EventPath: String, 
@@ -14,7 +15,7 @@ object ScoreGitHub{
         //val EventPath = "hdfs:///user/dd2645/github_raw/after2015/2018-03-01-10";
         val EventList = List("PushEvent","PullRequestEvent","IssuesEvent","WatchEvent" );
         val allEvents = loadGitHub.loadGitHubEvents(EventPath, EventList, sc);
-        allEvents.persist();
+        allEvents.persist(StorageLevel.MEMORY_AND_DISK);
 
         //load github repo language
         //original json data from google big query open data set
@@ -23,7 +24,7 @@ object ScoreGitHub{
     
         //Get the top first language from each repo
         val repoMainLang = parseRepoLang.selMainLang(repoLang);
-        repoMainLang.persist();
+        repoMainLang.persist(StorageLevel.MEMORY_AND_DISK);
 
         //Get the instrested language list
         val topLangList = Common.langList;
@@ -38,11 +39,6 @@ object ScoreGitHub{
         val ScorePercentage = aggregated.map(rdd => Common.transToPercent(rdd));
 
         return ScorePercentage;
-        //val weightList = List(0.25, 0.25, 0.25, 0.25);
-
-        //test output
-        //val outputDir = "hdfs:///user/dd2645/SparkProject/testOut2";
-        //combineScore(ScorePercentage, weightList).map(p => "(" + p._1.toString + "," + p._2.toString + ")").coalesce(1).saveAsTextFile(outputDir);
     }
 }
 

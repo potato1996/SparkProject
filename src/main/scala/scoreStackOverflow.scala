@@ -62,7 +62,9 @@ object ScoreStackOverflow{
     }
 
     def scoreStackOverflow(sourceFile: String,
-                          sc:SparkContext):RDD[(String,Map[String,Double])] = {
+                          sc:SparkContext):
+             (RDD[(String,Map[String,Double])],
+              RDD[(String,Map[String,Double])]) = {
 
         val rowData = sc.textFile(sourceFile).filter(line => line.contains("row"))
 
@@ -75,16 +77,20 @@ object ScoreStackOverflow{
             .map(fields => (fields._1, fields._2.flatMap(tagSet => tagSet.toList)));
 
         // tag count map
-        val tagsCnt = monthlyTags.map(fields => (fields._1, countWords(fields._2, fields._1)));
+        val tagsCnt = monthlyTags.filter(_._1.toInt >= 20151).map(fields => (fields._1, countWords(fields._2, fields._1)));
 
-        val filtered = tagsCnt.mapValues(m => m.filterKeys(Common.tagLangList.contains(_)));
+        val langFiltered = tagsCnt.mapValues(m => m.filterKeys(Common.tagLangList.contains(_)));
+        val techFiltered = tagsCnt.mapValues(m => m.filterKeys(Common.tagTechList.contains(_)));
 
         val langMap = Common.tagLangList.zip(Common.langList).toMap;
+        val techMap = Common.tagTechList.zip(Common.techList).toMap;
 
-        val toStandardName = filtered.mapValues(m => m.map(p => langMap(p._1) -> p._2));
+        val langStandardName = langFiltered.mapValues(m => m.map(p => langMap(p._1) -> p._2));
+        val techStandardName = techFiltered.mapValues(m => m.map(p => techMap(p._1) -> p._2));
 
-        val ScorePercentage = Common.transToPercent(toStandardName);
+        val langScorePercentage = Common.transToPercent(langStandardName);
+        val techScorePercentage = Common.transToPercent(techStandardName);
 
-        return ScorePercentage;
+        return (langScorePercentage, techScorePercentage);
     }
 } 
