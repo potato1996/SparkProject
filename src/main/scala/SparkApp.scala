@@ -93,14 +93,19 @@ object PotatoFinalProject{
         val SFScore = ScoreStackOverflow.scoreStackOverflow(SFPostPath, sc);
         
         //Score GitHub
-        val GitHubScoreList = ScoreGitHub.scoreGitHub(GitHubEventPath,
+        val GitHubScoreList = 
+        ScoreGitHub.scoreGitHub(GitHubEventPath,
                                   GitHubRepoLangPath,
-                                  sc);
+                                  sc).map(rdd => rdd.coalesce(400));
+
+	GitHubScoreList.foreach(_.persist());
 
         //weights to combine overall score
-        val weightList = List(0.4, 0.15, 0.15, 0.15, 0.15);
+        val weightList = List(0.5, 0.3, 0.5, 0.5, 0.1);
 
         val combinedScore = Common.combineScore(SFScore._1::GitHubScoreList, weightList);
+       
+        combinedScore.persist(StorageLevel.MEMORY_AND_DISK);
         
         val tableNames = List("Tech",
                               "LangCombined",
@@ -111,8 +116,6 @@ object PotatoFinalProject{
                               "NumStar");
 
         val allTables = SFScore._2 :: (combinedScore :: (SFScore._1 :: GitHubScoreList));
-        
-        allTables.foreach(_.persist());
        
         if(writeMongoDB){
               allTables.zip(tableNames).foreach(p => convertAndWrite(p._1, p._2));
@@ -120,7 +123,7 @@ object PotatoFinalProject{
               allTables.zip(tableNames).foreach(p => convertAndSave(p._1, p._2));
         }
 
-        //sc.stop();
+        sc.stop();
     }
     def main(args: Array[String]) {
         runAll();   
