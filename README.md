@@ -102,7 +102,7 @@ This part contains analysis code of StackOverflow&GitHub data.
 and uncomment the corresponding codes in `scoreGitHub.scala`. Then the 
 program will run from raw data, locate at:
 
-	hdfs:///user/dd2645/github_raw/after2015/*
+		hdfs:///user/dd2645/github_raw/after2015/*
 
 **Note2:(If you choose to run from raw data)** 
 It's strongly suggested that you first save the cleaned data,
@@ -133,33 +133,27 @@ of json files and will take a REALLY LONG TIME - **About 20 hours**.
 
 If you would like to connect to our UI module, please set `spark.MONGO_URI`, like:
 
-`spark2-submit --conf "spark.MONGO_URI=mongodb://{username}:{passwd}@{serverIP}:{portNum}/{dbname}" \`
+```
+spark2-submit --conf "spark.MONGO_URI=mongodb://{username}:{passwd}@{serverIP}:{portNum}/{dbname}" \
+              --conf "spark.network.timeout=1200s" \
+              --conf "spark.dynamicAllocation.maxExecutors=200" \
+              --conf "spark.ui.port=10101" \
+              --conf "spark.executor.memory=3g" \
+              --conf "spark.driver.memory=6g" \
+              ./target/scala-2.11/PotatoFinalProject-assembly-1.0.jar
 
-`              --conf "spark.network.timeout=1200s" \`
-
-`              --conf "spark.dynamicAllocation.maxExecutors=200" \`
-
-`              --conf "spark.ui.port=10101" \`
-
-`              --conf "spark.executor.memory=3g" \`
-
-`              --conf "spark.driver.memory=6g" \`
-
-`              ./target/scala-2.11/PotatoFinalProject-assembly-1.0.jar`
+```
 
 If you would like to run Spark part ONLY, just ignore the `spark.MONGO_URI` configue, like:
 
-`spark2-submit --conf "spark.network.timeout=1200s" \`
-
-`              --conf "spark.dynamicAllocation.maxExecutors=200" \`
-
-`              --conf "spark.ui.port=10101" \`
-
-`              --conf "spark.executor.memory=3g" \`
-
-`              --conf "spark.driver.memory=6g" \`
-
-`              ./target/scala-2.11/PotatoFinalProject-assembly-1.0.jar`
+```
+spark2-submit --conf "spark.network.timeout=1200s" \
+              --conf "spark.dynamicAllocation.maxExecutors=200" \
+              --conf "spark.ui.port=10101" \
+              --conf "spark.executor.memory=3g" \
+              --conf "spark.driver.memory=6g" \
+              ./target/scala-2.11/PotatoFinalProject-assembly-1.0.jar
+```
 
 **IMPORTANT NOTES**
 
