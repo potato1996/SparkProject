@@ -96,7 +96,7 @@ This part contains analysis code of StackOverflow&GitHub data.
 
 1. GitHub Events(Cleaned):
 
-	hdfs:///user/dd2645/SparkProject/CleanedEvents/*
+		hdfs:///user/dd2645/SparkProject/CleanedEvents/*
 
 **Note1:** To produce these cleaned events from raw data, please check 
 and uncomment the corresponding codes in `scoreGitHub.scala`. Then the 
@@ -111,11 +111,11 @@ of json files and will take a REALLY LONG TIME - **About 20 hours**.
 
 2. GitHub repo-language dataset:
 
-	hdfs:///user/dd2645/github_repo_language/github.json
+		hdfs:///user/dd2645/github_repo_language/github.json
 
 3. StackOveflow Posts:
 
-	hdfs:///user/hc2416/FinalProject/Posts.xml
+		hdfs:///user/hc2416/FinalProject/Posts.xml
 
 **How to run?**
 
