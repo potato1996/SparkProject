@@ -1,7 +1,10 @@
 # SparkProject
-RBAD Course Project
+RBAD Course Project: What's Hot \& What's New - Descover the Trending of
+Programming Languages \& Front End Technologies
 
 Created by Dayou Du, Hao Chen
+
+A living demo can be found [here](http://54.241.195.129:3000/)
 
 ## Prerequisties
 
@@ -15,18 +18,18 @@ Created by Dayou Du, Hao Chen
 
 **MONGODB IS REQUIRED IF CONNECTING SPARK AND UI MODULE**
 
-The spark program will feed UI module using MongoDB.
+- The spark program will feed UI module using MongoDB.
 
-Although the transfered data is really small (about several MBs),
-it is an elegent and automatic way to pass the data instead of 
-passing raw text files.
+- Although the transfered data is really small (about several MBs),
+  it is an elegent and automatic way to pass the data instead of 
+  passing raw text files.
 
-So, if you are connecting Spark+UI, please set up a MongoDB and set the
-corresponding configuration(details are described in the Usage below).
+- So, if you are connecting Spark+UI, please set up a MongoDB and set the
+  corresponding configuration(details are described in the Usage below).
 
-It's OK if you would like to run Spark part ONLY. If the corresponding
-configurations are not set, the program will write results in to a TestOut
-folder on HDFS.
+- It's OK if you would like to run Spark part ONLY. If the corresponding
+ configurations are not set, the program will write results in to a TestOut
+ folder on HDFS.
 
 ## Usage
 
@@ -50,14 +53,14 @@ Simply run these scripts in a unix-liked shell
 
 This part contains analysis code of StackOverflow&GitHub data.
 
-#### StackOverflow Part
+### StackOverflow Part
 
 1. scoreStackOverflow.scala: 
 
 	Read the StackOverflow data, get the tags, filter using language list 
 	and technology list, aggregate and convert to score.
 
-#### GitHub Part
+### GitHub Part
 
 1. loadGitHubData.scala
 
@@ -79,7 +82,7 @@ This part contains analysis code of StackOverflow&GitHub data.
 
 	Entry point for the GitHub part. Call other functions.
 
-#### Common Codes
+### Common Codes
 
 1. Common.scala
 
@@ -106,7 +109,7 @@ program will run from raw data, locate at:
 
 **Note2:(If you choose to run from raw data)** 
 It's strongly suggested that you first save the cleaned data,
-then run the else parts. The clean procedure will read and parse 3TB
+then run the else parts. The clean procedure will read and parse 3.3TB
 of json files and will take a REALLY LONG TIME - **About 20 hours**.
 
 2. GitHub repo-language dataset:
@@ -157,14 +160,14 @@ spark2-submit --conf "spark.network.timeout=1200s" \
 
 **IMPORTANT NOTES**
 
-The program is pretty large and would run 30~60 min given commands above. 
+- The program is pretty large and would run 30~60 min given commands above. 
 
-`spark.network.timeout` and `spark.executor.memory` is important here.
-(should be set at least as much as the example above).
+- `spark.network.timeout` and `spark.executor.memory` is important here.
+  (should be set at least as much as the example above).
 
-`spark.dynamicAllocation.maxExecutors` is set because by default Spark
-would spawn as much executors as possible. But we do NOT want to occupy
-all the CPU resources. (which would be killed by Admin :P)
+- `spark.dynamicAllocation.maxExecutors` is set because by default Spark
+  would spawn as much executors as possible. But we do NOT want to occupy
+  all the CPU resources. (which would be killed by Admin :P)
 
 
 ### 3. Web UI part: ${PROJECTROOT}/Spark-UI
