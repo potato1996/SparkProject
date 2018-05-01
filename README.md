@@ -1,5 +1,5 @@
 # SparkProject
-RBAD Course Project: What's Hot \& What's New - Descover the Trending of
+RBAD Course Project: What's Hot \& What's New - Discover the Trending of
 Programming Languages \& Front End Technologies
 
 Created by Dayou Du, Hao Chen

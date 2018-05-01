@@ -29,7 +29,6 @@ object ScoreGitHub{
 
         //load github repo language
         //original json data from google big query open data set
-        val repoLangPath = "hdfs:///user/dd2645/github_repo_language/github.json";
         val repoLang = loadGitHub.loadRepoLang(RepoLangPath, sc);
     
         //Get the top first language from each repo

@@ -36,10 +36,10 @@ object parseEvents{
             repoMainLang: RDD[(String, (String, Long))],
             truncTimePeriod: String => String) => {
 
-        val onlyPushes = allEvents.filter(line => line._4 == eventName);
+        val onlySpecEvents = allEvents.filter(line => line._4 == eventName);
 
         //[(event_repo_name, time)]
-        val repoNameAsKey = onlyPushes.map(p => p._3 -> parseTime(p._2));
+        val repoNameAsKey = onlySpecEvents.map(p => p._3 -> parseTime(p._2));
 
         //[(event_repo_name, (time, (lang, count)))]
         val joined = repoNameAsKey.join(repoMainLang);
