@@ -18,7 +18,7 @@ import org.apache.spark.storage.StorageLevel
 object PotatoFinalProject{
     var writeMongoDB: Boolean = false;
     var MongoDB_URI: String = "";
-    val OutDir = "hdfs:///user/dd2645/SparkProject/TestOut";
+    var OutDir: String = "";
 
     def convertAndWrite(res: RDD[(String, Map[String, Double])], 
                        tableName: String){
@@ -59,7 +59,7 @@ object PotatoFinalProject{
             jsonstr;
         }));
          
-        flattened.coalesce(5).saveAsTextFile(OutDir + "/" + tableName);
+        flattened.saveAsTextFile(OutDir + "/" + tableName);
     }
 
     def runAll(){
@@ -67,8 +67,8 @@ object PotatoFinalProject{
         val conf = new SparkConf();
         
         //ignore chatty messages
-	//Logger.getLogger("org").setLevel(Level.OFF);
-	//Logger.getLogger("akka").setLevel(Level.OFF);
+	Logger.getLogger("org").setLevel(Level.OFF);
+	Logger.getLogger("akka").setLevel(Level.OFF);
         
         //set mongodb address
         val dbconf = conf.getOption("spark.MONGO_URI");
@@ -76,13 +76,30 @@ object PotatoFinalProject{
             case Some(s) => {
                  MongoDB_URI = s;
                  writeMongoDB = true;
-                 println("MONGO_URI set. Will try connect to MongoDB:" + MongoDB_URI);
+                 println("MONGO_URI set. Will try connecting to MongoDB: " + MongoDB_URI);
             }
             case _ => {
                  writeMongoDB = false;
-                 println("MONGO_URI NOT set. Will try save to dir:" + OutDir);
+                 println("MONGO_URI NOT set. Will try saving to HDFS");
             }
         }
+
+	//set HDFS output dir
+	val hdfsconf = conf.getOption("spark.HDFS_OUT");
+	hdfsconf match{
+	    case Some(s) => {
+		OutDir = s;
+                if(!writeMongoDB){
+	 	    println("HDFS_OUT set. Will try saving to HDFS dir: " + s);	
+		}
+	    }
+	    case _ =>{
+		OutDir = "hdfs:///user/dd2645/SparkProject/TestOut";
+                if(!writeMongoDB){
+		    println("HDFS_OUT NOT set. Will try writting to HDFS dir: " + OutDir);
+                }
+	    }
+	}
 
         //input paths
         val GitHubEventPath = "hdfs:///user/dd2645/github_raw/after2015/*";

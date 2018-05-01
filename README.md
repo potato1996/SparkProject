@@ -27,9 +27,10 @@ A living demo can be found [here](http://54.241.195.129:3000/)
 - So, if you are connecting Spark+UI, please set up a MongoDB and set the
   corresponding configuration(details are described in the Usage below).
 
-- It's OK if you would like to run Spark part ONLY. If the corresponding
- configurations are not set, the program will write results in to a TestOut
- folder on HDFS.
+- It's OK if you would like to run Spark part ONLY. You can specify the HDFS
+  directory for the outputs (details are described below). If the corresponding
+  configurations are not set, the program will write results in to a TestOut
+  folder on HDFS.
 
 ## Usage
 
@@ -101,11 +102,11 @@ This part contains analysis code of StackOverflow&GitHub data.
 
 		hdfs:///user/dd2645/SparkProject/CleanedEvents/*
 
-**Note1:** To produce these cleaned events from raw data, please check 
+**Note1:** To produce these cleaned dataset from raw data, please check 
 and uncomment the corresponding codes in `scoreGitHub.scala`. Then the 
 program will run from raw data, locate at:
 
-		hdfs:///user/dd2645/github_raw/after2015/*
+	hdfs:///user/dd2645/github_raw/after2015/*
 
 **Note2:(If you choose to run from raw data)** 
 It's strongly suggested that you first save the cleaned data,
@@ -136,34 +137,41 @@ of json files and will take a REALLY LONG TIME - **About 20 hours**.
 
 If you would like to connect to our UI module, please set `spark.MONGO_URI`, like:
 
-```
+```Bash
 spark2-submit --conf "spark.MONGO_URI=mongodb://{username}:{passwd}@{serverIP}:{portNum}/{dbname}" \
               --conf "spark.network.timeout=1200s" \
               --conf "spark.dynamicAllocation.maxExecutors=200" \
               --conf "spark.ui.port=10101" \
-              --conf "spark.executor.memory=3g" \
+              --conf "spark.executor.memory=4g" \
               --conf "spark.driver.memory=6g" \
               ./target/scala-2.11/PotatoFinalProject-assembly-1.0.jar
-
 ```
 
-If you would like to run Spark part ONLY, just ignore the `spark.MONGO_URI` configue, like:
+If you would like to run Spark part ONLY, just ignore the `spark.MONGO_URI`. Instead please set `spark.HDFS_OUT` configue, like:
 
-```
-spark2-submit --conf "spark.network.timeout=1200s" \
+```Bash
+spark2-submit --conf "spark.HDFS_OUT=hdfs:///{your-desired-output-directory}" \
+              --conf "spark.network.timeout=1200s" \
               --conf "spark.dynamicAllocation.maxExecutors=200" \
               --conf "spark.ui.port=10101" \
-              --conf "spark.executor.memory=3g" \
+              --conf "spark.executor.memory=4g" \
               --conf "spark.driver.memory=6g" \
               ./target/scala-2.11/PotatoFinalProject-assembly-1.0.jar
 ```
+
+If Both configures are unset, the program will automatically write to a default HDFS directory(but maybe you donot have permissions:P)
+
+```
+hdfs:///user/dd2645/SparkProject/TestOut
+```
+
 
 **IMPORTANT NOTES**
 
 - The program is pretty large and would run 30~60 min given commands above. 
 
 - `spark.network.timeout` and `spark.executor.memory` is important here.
-  (should be set at least as much as the example above).
+  (should be set at least as much as the example above). **If you occupy less than 200 executors, you may need to increase the memory for each executor correspondingly. Otherwise we will fail to cache the data**
 
 - `spark.dynamicAllocation.maxExecutors` is set because by default Spark
   would spawn as much executors as possible. But we do NOT want to occupy
